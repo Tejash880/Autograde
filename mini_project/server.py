@@ -6,7 +6,7 @@ from datetime import datetime
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('postgresql://neondb_owner:npg_dzeKF9GOqvP2@ep-old-fog-ammgxf8k-pooler.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require', 'sqlite:///database.db')
-app.config['SECRET_KEY'] = 'autograde-griet-secret-2024'
+app.config['SECRET_KEY'] = os.environ.get('autograde-griet-secret-2024', 'dev-fallback-key')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 db = SQLAlchemy(app)
 
@@ -16,7 +16,7 @@ _grade_answer  = None
 
 def get_grader():
     import requests as http_req
-    ml_url = os.environ.get('ML_SERVICE_URL', '')
+    ml_url = os.environ.get('ML_SERVICE_URL', 'https://tejash9-autograde-ml.hf.space')
     def remote_grader(ref, stu, total=10):
         resp = http_req.post(
             ml_url + '/grade',
