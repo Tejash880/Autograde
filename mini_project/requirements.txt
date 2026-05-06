@@ -1,5 +1,8 @@
+numpy
+nltk
+tensorflow
+tensorflow-hub
+scikit-learn
+sentence-transformers
 flask
-flask-sqlalchemy
-werkzeug
-pypdf
-psycopg2-binary
+gunicorn
