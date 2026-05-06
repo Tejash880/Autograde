@@ -10,7 +10,9 @@ from nltk.corpus import stopwords
 from sentence_transformers import CrossEncoder
 
 nltk.download('punkt', quiet=True)
+nltk.download('punkt_tab', quiet=True)
 nltk.download('stopwords', quiet=True)
+nltk.download('averaged_perceptron_tagger', quiet=True)
 
 print("Loading ML Models (USE & NLI)... please wait.")
 use_model = hub.load("https://tfhub.dev/google/universal-sentence-encoder/4")
