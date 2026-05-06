@@ -5,8 +5,8 @@ import random, string, os, io, json, re
 from datetime import datetime
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
-app.config['SECRET_KEY'] = 'secret_key_123'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('postgresql://neondb_owner:npg_dzeKF9GOqvP2@ep-old-fog-ammgxf8k-pooler.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require', 'sqlite:///database.db')
+app.config['SECRET_KEY'] = 'autograde-griet-secret-2024'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 db = SQLAlchemy(app)
 
@@ -15,13 +15,17 @@ _models_loaded = False
 _grade_answer  = None
 
 def get_grader():
-    global _models_loaded, _grade_answer
-    if not _models_loaded:
-        import models as ml
-        _grade_answer  = ml.grade_answer
-        _models_loaded = True
-    return _grade_answer
-
+    import requests as http_req
+    ml_url = os.environ.get('ML_SERVICE_URL', '')
+    def remote_grader(ref, stu, total=10):
+        resp = http_req.post(
+            ml_url + '/grade',
+            json={"ref": ref, "stu": stu, "total": total},
+            timeout=120
+        )
+        r = resp.json()
+        return r['score'], r['entail'], r['contra'], r['msg']
+    return remote_grader
 # ── Database Models ────────────────────────────────────────────────────────────
 class User(db.Model):
     id       = db.Column(db.Integer, primary_key=True)
