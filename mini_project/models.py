@@ -116,8 +116,7 @@ def debug_grade(ref, stu, total=10):
     e, c = factual_consistency(ref, stu)
     print(f"entail={e:.4f}  contra={c:.4f}")
 
-debug_grade("A compiler converts all the code at once into machine code and you get an exe file. An interpreter runs code one line at a time. Python uses an interpreter and C++ uses a compiler.", "" \
-"A compiler translates the entire source code into machine code, resulting in an executable file. An interpreter, on the other hand, executes code line by line. Python is typically interpreted, while C++ is compiled.")
+
 
 def _sanity_check():
     test = "The mitochondria is the powerhouse of the cell."
