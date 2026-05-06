@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoGrade — GRIET</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div id="app">
+
+    <!-- ══════════════════════════════════════════════ TEACHER VIEW -->
+    <div id="teacher-view" class="hidden">
+        <header class="topbar">
+            <div class="topbar-left">
+                <div class="topbar-crest">
+                    <!-- Logo placeholder: replace img src with your college logo -->
+                    <img src="" alt="GRIET" class="topbar-logo-img" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                    <span class="topbar-crest-text" style="display:flex;flex-direction:column;align-items:center;line-height:1">
+                        <span style="font-size:0.85rem;font-weight:700;letter-spacing:0.01em">GRIET</span>
+                    </span>
+                </div>
+                <div class="topbar-titles">
+                    <span class="topbar-brand">AutoGrade</span>
+                    <span class="topbar-college">GRIET · Teacher Portal</span>
+                </div>
+            </div>
+            <div class="topbar-right">
+                <span id="teacher-name" class="user-badge"></span>
+                <button class="btn-ghost small" onclick="logout()">Logout</button>
+            </div>
+        </header>
+
+        <!-- Class list -->
+        <div id="t-class-list-view">
+            <div class="section-header">
+                <h3>My Classes</h3>
+                <button class="btn-primary small" onclick="showCreateClass()">+ New Class</button>
+            </div>
+            <div id="create-class-form" class="card hidden">
+                <h4>Create a New Class</h4>
+                <label>Class Name</label>
+                <input type="text" id="new-class-name" placeholder="e.g. Data Structures – CSE A">
+                <div class="form-footer">
+                    <button class="btn-primary" onclick="createClass()">Create</button>
+                    <button class="btn-ghost" onclick="hideCreateClass()">Cancel</button>
+                    <span id="create-class-status" class="status-msg"></span>
+                </div>
+            </div>
+            <div id="t-class-list"><p class="muted">Loading…</p></div>
+        </div>
+
+        <!-- Class detail -->
+        <div id="t-class-detail" class="hidden">
+            <button class="btn-ghost back-btn" onclick="backToTeacherClasses()">← My Classes</button>
+            <div class="class-hero">
+                <div>
+                    <h2 id="t-class-name"></h2>
+                    <p class="muted">by <span id="t-class-teacher"></span></p>
+                </div>
+                <div class="class-code-badge" title="Share this code with students">
+                    <span class="code-label">Join Code</span>
+                    <span id="t-class-code" class="code-value"></span>
+                </div>
+            </div>
+            <div class="tab-bar">
+                <button class="tab active" data-tab="questions" onclick="teacherTab('questions')">Questions</button>
+                <button class="tab" data-tab="results" onclick="teacherTab('results')">Results</button>
+                <button class="tab" data-tab="analytics" onclick="teacherTab('analytics')">Analytics</button>
+            </div>
+
+            <!-- ── Questions tab ─────────────────────────────────────── -->
+            <div id="t-tab-questions">
+                <!-- Section manager -->
+                <div class="section-mgr-bar">
+                    <span class="add-mode-label">Section:</span>
+                    <select id="t-section-select" onchange="onTeacherSectionChange()">
+                        <option value="">— No Section —</option>
+                    </select>
+                    <button class="btn-ghost small" onclick="showCreateSection()">+ New Section</button>
+                    <button class="btn-ghost small danger-btn" id="delete-section-btn" onclick="deleteCurrentSection()" style="display:none">Delete Section</button>
+                </div>
+                <div id="create-section-form" class="card hidden">
+                    <h4>Create a Section</h4>
+                    <label>Section Title (e.g. "Assignment 1")</label>
+                    <input type="text" id="new-section-title" placeholder="e.g. Assignment 1">
+                    <label>Deadline (optional)</label>
+                    <input type="datetime-local" id="new-section-deadline">
+                    <div class="form-footer">
+                        <button class="btn-primary" onclick="createSection()">Create</button>
+                        <button class="btn-ghost" onclick="hideCreateSection()">Cancel</button>
+                        <span id="create-section-status" class="status-msg"></span>
+                    </div>
+                </div>
+                <div id="section-deadline-edit" class="section-deadline-row hidden">
+                    <span class="add-mode-label">Deadline:</span>
+                    <input type="datetime-local" id="edit-section-deadline">
+                    <button class="btn-ghost small" onclick="saveSectionDeadline()">Save</button>
+                    <span id="section-deadline-status" class="status-msg"></span>
+                </div>
+
+                <div class="add-mode-bar">
+                    <span class="add-mode-label">Add questions:</span>
+                    <div class="add-mode-toggle">
+                        <button class="add-mode-btn active" id="mode-single-btn" onclick="setAddMode('single')">Single</button>
+                        <button class="add-mode-btn" id="mode-bulk-btn" onclick="setAddMode('bulk')">Bulk</button>
+                    </div>
+                </div>
+
+                <!-- Single -->
+                <div id="single-add-panel" class="card">
+                    <h4>Add a Question</h4>
+                    <label>Question Text</label>
+                    <textarea id="new-q-text" placeholder="Write your question here…" rows="3"></textarea>
+                    <label>Reference (Ideal) Answer</label>
+                    <textarea id="new-q-ref" placeholder="The ideal answer students will be graded against…" rows="4"></textarea>
+
+                    <!-- Multi-Q&A PDF upload -->
+                    <div class="pdf-upload-row">
+                        <span class="pdf-upload-label">Or upload PDF with multiple Q&amp;A pairs</span>
+                        <label class="btn-upload" for="teacher-pdf">📄 Upload PDF</label>
+                        <input type="file" id="teacher-pdf" accept=".pdf" class="hidden" onchange="handleTeacherMultiPdf(this)">
+                        <span id="teacher-pdf-status" class="status-msg"></span>
+                    </div>
+                    <div id="teacher-pdf-preview" class="pdf-preview hidden">
+                        <p class="pdf-preview-label">Extracted Q&amp;A pairs — edit then add all:</p>
+                        <div id="teacher-pdf-pairs"></div>
+                        <div class="form-footer">
+                            <button class="btn-primary small" onclick="addAllPdfPairs()">Add All Pairs</button>
+                            <button class="btn-ghost small" onclick="hidePdfPreview()">Dismiss</button>
+                            <span id="teacher-pdf-add-status" class="status-msg"></span>
+                        </div>
+                    </div>
+
+                    <div class="form-footer">
+                        <button class="btn-primary" id="post-btn" onclick="postQuestion()">Add Question</button>
+                        <span id="post-status" class="status-msg"></span>
+                    </div>
+                </div>
+
+                <!-- Bulk -->
+                <div id="bulk-add-panel" class="hidden">
+                    <div class="bulk-controls card">
+                        <div class="bulk-controls-row">
+                            <div class="bulk-count-wrap">
+                                <label for="bulk-count">Number of questions to add</label>
+                                <div class="bulk-stepper">
+                                    <button class="stepper-btn" onclick="changeCount(-1)">−</button>
+                                    <input type="number" id="bulk-count" value="3" min="1" max="20" onchange="renderBulkSlots()" oninput="clampCount(this)">
+                                    <button class="stepper-btn" onclick="changeCount(1)">+</button>
+                                </div>
+                                <span class="muted small">Max 20 per batch</span>
+                            </div>
+                            <div class="bulk-actions">
+                                <button class="btn-ghost small" onclick="clearAllSlots()">Clear All</button>
+                                <button class="btn-primary" id="bulk-submit-btn" onclick="submitBulk()">Publish All <span id="bulk-count-label">3</span> Questions</button>
+                            </div>
+                        </div>
+                        <!-- Bulk multi-PDF upload -->
+                        <div class="pdf-upload-row" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+                            <span class="pdf-upload-label">Or auto-fill all slots from one PDF</span>
+                            <label class="btn-upload" for="bulk-multi-pdf">📄 Upload PDF</label>
+                            <input type="file" id="bulk-multi-pdf" accept=".pdf" class="hidden" onchange="handleBulkMultiPdf(this)">
+                            <span id="bulk-multi-pdf-status" class="status-msg"></span>
+                        </div>
+                        <div id="bulk-progress-wrap" class="hidden">
+                            <div class="progress-track"><div class="progress-fill" id="bulk-progress-fill"></div></div>
+                            <p id="bulk-progress-label" class="progress-label">0 / 0 added</p>
+                        </div>
+                    </div>
+                    <div id="bulk-slots"></div>
+                    <div class="bulk-bottom-bar">
+                        <span id="bulk-bottom-status" class="status-msg"></span>
+                        <button class="btn-primary" onclick="submitBulk()">Publish All <span class="bulk-count-label-2">3</span> Questions</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="t-question-list" style="margin-top:8px"><p class="muted">No questions yet.</p></div>
+
+            <!-- ── Results tab ─────────────────────────────────────────── -->
+            <div id="t-tab-results" class="hidden">
+                <div class="card">
+                    <div class="results-header">
+                        <h4>Student Submissions</h4>
+                        <button class="btn-ghost small" onclick="loadResults()">↻ Refresh</button>
+                    </div>
+                    <div id="results-list"><p class="muted">Loading…</p></div>
+                </div>
+            </div>
+
+            <!-- ── Analytics tab ────────────────────────────────────────── -->
+            <div id="t-tab-analytics" class="hidden">
+                <div id="analytics-container"><p class="muted">Loading analytics…</p></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════ STUDENT VIEW -->
+    <div id="student-view" class="hidden">
+        <header class="topbar">
+            <div class="topbar-left">
+                <div class="topbar-crest">
+                    <img src="" alt="GRIET" class="topbar-logo-img" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                    <span class="topbar-crest-text" style="display:flex;flex-direction:column;align-items:center;line-height:1">
+                        <span style="font-size:0.85rem;font-weight:700;letter-spacing:0.01em">GRIET</span>
+                    </span>
+                </div>
+                <div class="topbar-titles">
+                    <span class="topbar-brand">AutoGrade</span>
+                    <span class="topbar-college">GRIET · Student Portal</span>
+                </div>
+            </div>
+            <div class="topbar-right">
+                <span id="student-name" class="user-badge"></span>
+                <button class="btn-ghost small" onclick="showGradeHistory()">📊 My Grades</button>
+                <button class="btn-ghost small" onclick="logout()">Logout</button>
+            </div>
+        </header>
+
+        <!-- My classes -->
+        <div id="s-class-list-view">
+            <div class="section-header">
+                <h3>My Classes</h3>
+                <button class="btn-primary small" onclick="showJoinClass()">+ Join a Class</button>
+            </div>
+            <div id="join-class-form" class="card hidden">
+                <h4>Join a Class</h4>
+                <label>Enter the join code given by your teacher</label>
+                <div class="code-input-row">
+                    <input type="text" id="join-code-input" placeholder="e.g. A3B7K2" maxlength="6" autocomplete="off"
+                           style="text-transform:uppercase;letter-spacing:0.18em;font-family:monospace;font-size:1.15rem;font-weight:700">
+                    <button class="btn-primary" onclick="joinClass()">Join</button>
+                </div>
+                <p id="join-error" class="error-msg hidden"></p>
+                <button class="btn-ghost small" onclick="hideJoinClass()" style="margin-top:10px">Cancel</button>
+            </div>
+            <div id="s-class-list"><p class="muted">Loading your classes…</p></div>
+        </div>
+
+        <!-- Grade history overlay -->
+        <div id="grade-history-overlay" class="hidden">
+            <div class="grade-history-panel">
+                <div class="grade-history-header">
+                    <h3>My Grade History</h3>
+                    <button class="btn-ghost small" onclick="hideGradeHistory()">✕ Close</button>
+                </div>
+                <div id="grade-history-list"><p class="muted">Loading…</p></div>
+            </div>
+        </div>
+
+        <!-- Class detail -->
+        <div id="s-class-detail" class="hidden">
+            <button class="btn-ghost back-btn" onclick="backToStudentClasses()">← My Classes</button>
+            <div class="class-hero">
+                <div>
+                    <h2 id="s-class-name"></h2>
+                    <p class="muted">by <span id="s-class-teacher"></span></p>
+                </div>
+            </div>
+            <div class="add-mode-bar" id="s-mode-bar">
+                <span class="add-mode-label">Submission mode:</span>
+                <div class="add-mode-toggle">
+                    <button class="add-mode-btn active" id="s-mode-one-btn" onclick="setStudentMode('one')">One at a time</button>
+                    <button class="add-mode-btn" id="s-mode-all-btn" onclick="setStudentMode('all')">Submit all at once</button>
+                </div>
+            </div>
+            <div id="s-question-list"></div>
+            <div id="s-batch-panel" class="hidden">
+                <!-- Multi-PDF upload for student batch -->
+                <div class="card" style="margin-bottom:12px">
+                    <div class="pdf-upload-row" style="margin:0">
+                        <span class="pdf-upload-label" style="flex:1">Upload a single PDF with answers for multiple questions (use headings like "Question 2 Answer:")</span>
+                        <label class="btn-upload" for="student-multi-pdf">📄 Upload PDF</label>
+                        <input type="file" id="student-multi-pdf" accept=".pdf" class="hidden" onchange="handleStudentMultiPdf(this)">
+                        <span id="student-multi-pdf-status" class="status-msg"></span>
+                    </div>
+                </div>
+                <div id="s-batch-slots"></div>
+                <div class="batch-submit-bar">
+                    <div id="batch-progress-wrap" class="hidden">
+                        <div class="progress-track"><div class="progress-fill" id="batch-progress-fill"></div></div>
+                        <p id="batch-progress-label" class="progress-label"></p>
+                    </div>
+                    <div class="batch-submit-row">
+                        <span id="batch-status" class="status-msg"></span>
+                        <button class="btn-primary" id="batch-submit-btn" onclick="submitBatch()">Submit All for Grading</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Single answer view -->
+        <div id="s-answer-view" class="hidden">
+            <button class="btn-ghost back-btn" onclick="backToStudentClass()">← Back to Questions</button>
+            <div class="card">
+                <p class="q-label">Question</p>
+                <h3 id="active-q-text"></h3>
+                <label>Your Answer</label>
+                <textarea id="student-answer" placeholder="Write your answer here…" rows="6"></textarea>
+                <div class="pdf-upload-row">
+                    <span class="pdf-upload-label">Or upload your answer as a PDF</span>
+                    <label class="btn-upload" for="student-pdf">📄 Upload PDF</label>
+                    <input type="file" id="student-pdf" accept=".pdf" class="hidden" onchange="handleStudentPdf(this)">
+                    <span id="student-pdf-status" class="status-msg"></span>
+                </div>
+                <p id="answer-error" class="error-msg hidden">Please write or upload an answer before submitting.</p>
+                <button class="btn-primary" id="submit-btn" onclick="submitAnswer()">Submit for Grading</button>
+            </div>
+            <div id="result-card" class="hidden result-card">
+                <div class="score-ring-wrap">
+                    <svg class="score-ring" viewBox="0 0 120 120">
+                        <circle class="ring-bg" cx="60" cy="60" r="52"/>
+                        <circle class="ring-fill" id="ring-fill" cx="60" cy="60" r="52" stroke-dasharray="326.7" stroke-dashoffset="326.7"/>
+                    </svg>
+                    <div class="score-text">
+                        <span id="score-num">0</span>
+                        <span class="score-denom" id="score-denom">/10</span>
+                    </div>
+                </div>
+                <div id="result-feedback" class="result-feedback"></div>
+                <button class="btn-ghost" onclick="backToStudentClass()">← Answer Another Question</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="loading-overlay" class="hidden">
+    <div class="loading-box">
+        <div class="spinner"></div>
+        <p id="loading-msg">Please wait…</p>
+        <p class="muted small">ML models may take ~30s to load on first submit</p>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

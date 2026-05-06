@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoGrade — GRIET</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="auth-page">
+
+<div class="auth-page-inner">
+    <!-- Left panel — college branding -->
+    <div class="auth-brand-panel">
+        <div class="auth-brand-content">
+            <div class="college-crest">
+                <div class="crest-inner">
+                    <span class="crest-letters">GR</span>
+                    <span class="crest-iet">IET</span>
+                </div>
+            </div>
+            <h1 class="college-name">Gokaraju Rangaraju<br>Institute of Engineering<br>and Technology</h1>
+            <div class="college-divider"></div>
+            <p class="college-tagline">Excellence in Engineering Education</p>
+            <div class="auth-brand-footer">
+                <span class="product-name">AutoGrade</span>
+                <span class="product-sub">AI-Powered Answer Evaluation System</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right panel — form -->
+    <div class="auth-form-panel">
+        <div class="auth-form-inner">
+            <div class="auth-form-header">
+                <h2 id="auth-title">Welcome Back</h2>
+                <p class="auth-subtitle" id="auth-subtitle">Sign in to your AutoGrade account</p>
+            </div>
+
+            <div class="auth-mode-toggle">
+                <button class="auth-mode-btn active" id="btn-login" onclick="switchMode('login')">Sign In</button>
+                <button class="auth-mode-btn" id="btn-register" onclick="switchMode('register')">Register</button>
+            </div>
+
+            <!-- Sign In -->
+            <div id="login-form" class="auth-fields">
+                <div class="field-group">
+                    <label>Username</label>
+                    <input type="text" id="li-username" placeholder="Enter your username" autocomplete="username">
+                </div>
+                <div class="field-group">
+                    <label>Password</label>
+                    <input type="password" id="li-password" placeholder="Enter your password" autocomplete="current-password">
+                </div>
+                <p id="login-error" class="error-msg hidden"></p>
+                <button class="btn-primary full-width" id="login-btn" onclick="doLogin()">Sign In</button>
+            </div>
+
+            <!-- Register -->
+            <div id="register-form" class="auth-fields hidden">
+                <div class="field-group">
+                    <label>Username</label>
+                    <input type="text" id="reg-username" placeholder="Choose a username" autocomplete="username">
+                </div>
+                <div class="field-group">
+                    <label>Password</label>
+                    <input type="password" id="reg-password" placeholder="At least 4 characters" autocomplete="new-password">
+                </div>
+                <div class="field-group">
+                    <label>I am a…</label>
+                    <div class="role-toggle">
+                        <button class="role-btn active" data-role="student" onclick="selectRole('student')">Student</button>
+                        <button class="role-btn" data-role="teacher" onclick="selectRole('teacher')">Teacher</button>
+                    </div>
+                </div>
+                <input type="hidden" id="reg-role" value="student">
+                <p id="register-error" class="error-msg hidden"></p>
+                <button class="btn-primary full-width" id="register-btn" onclick="doRegister()">Create Account</button>
+            </div>
+
+            <p class="auth-footer-note">GRIET AutoGrade · Academic Use Only</p>
+        </div>
+    </div>
+</div>
+
+<script>
+let authMode = 'login';
+let regRole  = 'student';
+
+function switchMode(mode) {
+    authMode = mode;
+    document.getElementById('login-form').classList.toggle('hidden', mode !== 'login');
+    document.getElementById('register-form').classList.toggle('hidden', mode !== 'register');
+    document.getElementById('btn-login').classList.toggle('active', mode === 'login');
+    document.getElementById('btn-register').classList.toggle('active', mode === 'register');
+    document.getElementById('auth-title').textContent    = mode === 'login' ? 'Welcome Back'    : 'Create Account';
+    document.getElementById('auth-subtitle').textContent = mode === 'login' ? 'Sign in to your AutoGrade account' : 'Register as a student or teacher';
+    clearErrors();
+}
+
+function selectRole(role) {
+    regRole = role;
+    document.getElementById('reg-role').value = role;
+    document.querySelectorAll('.role-btn').forEach(b => b.classList.toggle('active', b.dataset.role === role));
+}
+
+function clearErrors() {
+    ['login-error','register-error'].forEach(id => {
+        const el = document.getElementById(id);
+        el.textContent = ''; el.classList.add('hidden');
+    });
+}
+
+async function doLogin() {
+    const username = document.getElementById('li-username').value.trim();
+    const password = document.getElementById('li-password').value;
+    const errEl    = document.getElementById('login-error');
+    const btn      = document.getElementById('login-btn');
+    if (!username || !password) { showErr(errEl, 'Enter username and password.'); return; }
+    btn.disabled = true; btn.textContent = 'Signing in…';
+    try {
+        const res  = await fetch('/api/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ username, password }) });
+        const data = await res.json();
+        if (!res.ok) { showErr(errEl, data.err || 'Login failed.'); return; }
+        window.location.href = '/home';
+    } catch (e) { showErr(errEl, 'Server error. Is Flask running?'); }
+    finally { btn.disabled = false; btn.textContent = 'Sign In'; }
+}
+
+async function doRegister() {
+    const username = document.getElementById('reg-username').value.trim();
+    const password = document.getElementById('reg-password').value;
+    const errEl    = document.getElementById('register-error');
+    const btn      = document.getElementById('register-btn');
+    if (!username || !password) { showErr(errEl, 'All fields are required.'); return; }
+    btn.disabled = true; btn.textContent = 'Creating account…';
+    try {
+        const res  = await fetch('/api/register', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ username, password, role: regRole }) });
+        const data = await res.json();
+        if (!res.ok) { showErr(errEl, data.err || 'Registration failed.'); return; }
+        window.location.href = '/home';
+    } catch (e) { showErr(errEl, 'Server error. Is Flask running?'); }
+    finally { btn.disabled = false; btn.textContent = 'Create Account'; }
+}
+
+function showErr(el, msg) { el.textContent = msg; el.classList.remove('hidden'); }
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('keydown', e => {
+        if (e.key !== 'Enter') return;
+        if (authMode === 'login') doLogin(); else doRegister();
+    });
+});
+</script>
+</body>
+</html>
